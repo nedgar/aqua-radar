@@ -1,0 +1,488 @@
+[
+    {
+        "id": "94ceff76.02d1c",
+        "type": "tab",
+        "label": "Hydrometrics"
+    },
+    {
+        "id": "58a323ac.b05adc",
+        "type": "debug",
+        "z": "94ceff76.02d1c",
+        "name": "log payload",
+        "active": true,
+        "console": "false",
+        "complete": "payload",
+        "x": 633,
+        "y": 296,
+        "wires": []
+    },
+    {
+        "id": "13acad96.871512",
+        "type": "http in",
+        "z": "94ceff76.02d1c",
+        "name": "POST to /readings",
+        "url": "/readings",
+        "method": "post",
+        "swaggerDoc": "",
+        "x": 188,
+        "y": 274,
+        "wires": [
+            [
+                "50794fc9.cea15",
+                "46b9eaca.8fa2b4"
+            ]
+        ]
+    },
+    {
+        "id": "50794fc9.cea15",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "parse request",
+        "func": "msg.timeReceived = new Date().toISOString();\nmsg.contentType = msg.req.get('Content-Type') || \"\";\nmsg.payload = msg.req.body;\nmsg.deviceId = msg.req.params.deviceId || \"Metawatch\";\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 444,
+        "y": 202,
+        "wires": [
+            [
+                "58a323ac.b05adc",
+                "c2756e07.77ea"
+            ]
+        ]
+    },
+    {
+        "id": "4a2498b3.3da808",
+        "type": "catch",
+        "z": "94ceff76.02d1c",
+        "name": "",
+        "scope": null,
+        "x": 102,
+        "y": 655,
+        "wires": [
+            [
+                "dacac14d.5809b"
+            ]
+        ]
+    },
+    {
+        "id": "dacac14d.5809b",
+        "type": "debug",
+        "z": "94ceff76.02d1c",
+        "name": "log error",
+        "active": true,
+        "console": "false",
+        "complete": "error",
+        "x": 246,
+        "y": 713,
+        "wires": []
+    },
+    {
+        "id": "a7fcd9b7.7d7858",
+        "type": "cloudant in",
+        "z": "94ceff76.02d1c",
+        "name": "Fetch all readings",
+        "cloudant": "",
+        "database": "readings",
+        "service": "Node-Radar2-cloudantNoSQLDB",
+        "search": "_all_",
+        "design": "",
+        "index": "",
+        "x": 321,
+        "y": 62,
+        "wires": [
+            [
+                "ce94a0dd.dc00f"
+            ]
+        ]
+    },
+    {
+        "id": "5ab7e90e.523518",
+        "type": "ibmiot out",
+        "z": "94ceff76.02d1c",
+        "authentication": "boundService",
+        "apiKey": "",
+        "outputType": "evt",
+        "deviceId": "metawatch",
+        "deviceType": "Hydrometric_Station",
+        "eventCommandType": "update",
+        "format": "json",
+        "data": "{}",
+        "qos": "0",
+        "name": "Send to IoT",
+        "service": "registered",
+        "x": 743,
+        "y": 647,
+        "wires": []
+    },
+    {
+        "id": "5c10a54f.d3922c",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "Convert to IoT msg",
+        "func": "var p = msg.payload || {},\n    typ = p.typeCode || \"_\",\n    k = p.kind || \"unknown\";\np[typ+\".\"+k] = p.value;\nmsg = {\n    deviceId: p.deviceId,\n    deviceType: p.deviceType || \"Hydrometrics_Station\",\n    format: 'json',\n    eventOrCommandType: 'update',\n    payload: {d: p}\n}\ndelete p.deviceId;\ndelete p.deviceType;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 519,
+        "y": 627,
+        "wires": [
+            [
+                "5ab7e90e.523518",
+                "31dc8e65.6f33e2"
+            ]
+        ]
+    },
+    {
+        "id": "31dc8e65.6f33e2",
+        "type": "debug",
+        "z": "94ceff76.02d1c",
+        "name": "log msg",
+        "active": true,
+        "console": "false",
+        "complete": "true",
+        "x": 729,
+        "y": 489,
+        "wires": []
+    },
+    {
+        "id": "85fe7967.e4aad8",
+        "type": "http in",
+        "z": "94ceff76.02d1c",
+        "name": "POST to /readings/:deviceId",
+        "url": "/readings/:deviceId",
+        "method": "post",
+        "swaggerDoc": "",
+        "x": 147,
+        "y": 226,
+        "wires": [
+            [
+                "50794fc9.cea15",
+                "46b9eaca.8fa2b4"
+            ]
+        ]
+    },
+    {
+        "id": "d8d262fe.2896c",
+        "type": "http in",
+        "z": "94ceff76.02d1c",
+        "name": "PUT to /readings/:deviceId",
+        "url": "/readings/:deviceId",
+        "method": "put",
+        "swaggerDoc": "",
+        "x": 137,
+        "y": 181,
+        "wires": [
+            [
+                "50794fc9.cea15",
+                "46b9eaca.8fa2b4"
+            ]
+        ]
+    },
+    {
+        "id": "9e90a4cf.86fb38",
+        "type": "csv",
+        "z": "94ceff76.02d1c",
+        "name": "",
+        "sep": ",",
+        "hdrin": false,
+        "hdrout": "",
+        "multi": "mult",
+        "ret": "\\n",
+        "temp": "deviceId,timestamp,value,kind,typeCode,forecastDate,extra1,extra2,extra3,extra4,extra5",
+        "x": 323,
+        "y": 346,
+        "wires": [
+            [
+                "58a323ac.b05adc",
+                "723afe18.b59b6",
+                "d6769a8d.fe07c8"
+            ]
+        ]
+    },
+    {
+        "id": "c2756e07.77ea",
+        "type": "switch",
+        "z": "94ceff76.02d1c",
+        "name": "contentType?",
+        "property": "contentType",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "text/csv",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "test/json",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "application/json",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "outputs": 4,
+        "x": 98,
+        "y": 359,
+        "wires": [
+            [
+                "9e90a4cf.86fb38"
+            ],
+            [
+                "d6769a8d.fe07c8",
+                "55863ca5.baa344"
+            ],
+            [
+                "d6769a8d.fe07c8",
+                "723afe18.b59b6"
+            ],
+            [
+                "893af6a1.1525a8"
+            ]
+        ]
+    },
+    {
+        "id": "b6de84db.da9638",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "Add metadata",
+        "func": "p = msg.payload;\n// p.ip = msg.req.ip;\np.timeReceived = msg.timeReceived;\np.deviceId = p.deviceId || msg.deviceId;\np.deviceType = p.deviceType || msg.deviceType;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 331,
+        "y": 548,
+        "wires": [
+            [
+                "84145731.420c08",
+                "5c10a54f.d3922c"
+            ]
+        ]
+    },
+    {
+        "id": "c0fa9787.6ffaf8",
+        "type": "ibmiot in",
+        "z": "94ceff76.02d1c",
+        "authentication": "boundService",
+        "apiKey": "",
+        "inputType": "evt",
+        "deviceId": "",
+        "applicationId": "",
+        "deviceType": "+",
+        "eventType": "+",
+        "commandType": "",
+        "format": "json",
+        "name": "IBM IoT",
+        "service": "registered",
+        "allDevices": true,
+        "allApplications": "",
+        "allDeviceTypes": true,
+        "allEvents": true,
+        "allCommands": "",
+        "allFormats": true,
+        "qos": 0,
+        "x": 419,
+        "y": 791,
+        "wires": [
+            [
+                "e11ce546.7eb848"
+            ]
+        ]
+    },
+    {
+        "id": "e11ce546.7eb848",
+        "type": "debug",
+        "z": "94ceff76.02d1c",
+        "name": "IoT msg received",
+        "active": true,
+        "console": "false",
+        "complete": "true",
+        "x": 613,
+        "y": 815,
+        "wires": []
+    },
+    {
+        "id": "84145731.420c08",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "Assign doc ID",
+        "func": "var p = msg.payload,\n    tc = p.typeCode || \"?\",\n    k = p.kind,\n    r = Math.floor(Math.random() * 10000),\n    key = [p.timestamp, p.deviceId, tc, k, r];\np._id = key.join(\"/\");\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 520,
+        "y": 568,
+        "wires": [
+            [
+                "31dc8e65.6f33e2",
+                "3a087e1b.8160d2"
+            ]
+        ]
+    },
+    {
+        "id": "55863ca5.baa344",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "Convert timestamp",
+        "func": "var t = msg.payload.timestamp;\nt = t || new Date().toISOString();\n// if (t.endsWith(\" AM\") || t.endsWith(\" PM\")) {\n//     t = new Date(t + \" UTC\").toISOString();\n// }\nif (t.indexOf(\"PM\") != -1 || t.indexOf(\"AM\") != -1) {\n    t = new Date(t + \" UTC\").toISOString();\n}\nmsg.payload.timestamp = t;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 340,
+        "y": 495,
+        "wires": [
+            [
+                "b6de84db.da9638"
+            ]
+        ]
+    },
+    {
+        "id": "9aaff1d8.d98bf",
+        "type": "http response",
+        "z": "94ceff76.02d1c",
+        "name": "Response",
+        "x": 608,
+        "y": 391,
+        "wires": []
+    },
+    {
+        "id": "30699627.efc8aa",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "Convert to DataDog series",
+        "func": "var p = msg.payload;\nvar host = p.deviceId || 'unknown';\nvar t = new Date(p.timestamp).getTime() / 1000;\nvar series = [];\nvar metrics = ['CurrentLevel', 'RateOfRise', 'PeakRateofRise'];\nmetrics.forEach(function(m) {\n    if (typeof(p[m]) == 'number') {\n        series.push({\n            metric: m,\n            points: [\n                [t, p[m]]\n            ],\n            type: 'gauge',\n            host: host\n        });\n    }\n});\nmsg = {\n    payload: {\n        series: series\n    }\n};\nmsg.headers = {}\nmsg.headers['Content-Type'] = 'application/json';\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 482,
+        "y": 693,
+        "wires": [
+            [
+                "11c02510.dfc50b"
+            ]
+        ]
+    },
+    {
+        "id": "11c02510.dfc50b",
+        "type": "http request",
+        "z": "94ceff76.02d1c",
+        "name": "Send to DataDog",
+        "method": "POST",
+        "ret": "txt",
+        "url": "https://app.datadoghq.com/api/v1/series?api_key=f20a4102ae57d9f5ae885bc6516fc7e5",
+        "tls": "",
+        "x": 640,
+        "y": 748,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3a087e1b.8160d2",
+        "type": "cloudant out",
+        "z": "94ceff76.02d1c",
+        "name": "NR2 Cloudant",
+        "cloudant": "",
+        "database": "readings",
+        "service": "Node-Radar2-cloudantNoSQLDB",
+        "payonly": true,
+        "operation": "insert",
+        "x": 742,
+        "y": 592,
+        "wires": []
+    },
+    {
+        "id": "76645b14.b78d24",
+        "type": "http in",
+        "z": "94ceff76.02d1c",
+        "name": "GET /readings",
+        "url": "/readings",
+        "method": "get",
+        "swaggerDoc": "",
+        "x": 111,
+        "y": 62,
+        "wires": [
+            [
+                "a7fcd9b7.7d7858",
+                "46b9eaca.8fa2b4"
+            ]
+        ]
+    },
+    {
+        "id": "ce94a0dd.dc00f",
+        "type": "http response",
+        "z": "94ceff76.02d1c",
+        "name": "Respond with readings",
+        "x": 568,
+        "y": 63,
+        "wires": []
+    },
+    {
+        "id": "46b9eaca.8fa2b4",
+        "type": "debug",
+        "z": "94ceff76.02d1c",
+        "name": "log request URL",
+        "active": true,
+        "console": "false",
+        "complete": "req.originalUrl",
+        "x": 416,
+        "y": 142,
+        "wires": []
+    },
+    {
+        "id": "893af6a1.1525a8",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "error response",
+        "func": "msg.payload = \"Unsupported content type\";\nmsg.statusCode = 400;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 113,
+        "y": 475,
+        "wires": [
+            [
+                "5b0fac73.e90544"
+            ]
+        ]
+    },
+    {
+        "id": "5b0fac73.e90544",
+        "type": "http response",
+        "z": "94ceff76.02d1c",
+        "name": "Response",
+        "x": 98,
+        "y": 539,
+        "wires": []
+    },
+    {
+        "id": "723afe18.b59b6",
+        "type": "split",
+        "z": "94ceff76.02d1c",
+        "name": "",
+        "splt": "\\n",
+        "x": 329,
+        "y": 435,
+        "wires": [
+            [
+                "55863ca5.baa344"
+            ]
+        ]
+    },
+    {
+        "id": "d6769a8d.fe07c8",
+        "type": "function",
+        "z": "94ceff76.02d1c",
+        "name": "no-op",
+        "func": "\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 453,
+        "y": 388,
+        "wires": [
+            [
+                "9aaff1d8.d98bf"
+            ]
+        ]
+    }
+]

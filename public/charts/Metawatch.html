@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<title>Metawatch: Current readings</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+
+<div id="chart" style="width:1024px; height:650px;"></div>
+
+<script>
+	/*globals Plotly d3*/
+	window.d3 = Plotly.d3;
+
+	const FIELDS = [
+		{num: 1, name: "Carillon flow (estimate)", yaxis: 'y', color: '#ff7f0e'},
+		{num: 5, name: "Pointe Fortune level (estimate)", yaxis: 'y2', color: '#1f77b4'},
+		{num: 4, name: "Pointe Calumet level (actual)", yaxis: 'y2', color: '#2ca02c'}
+	];
+
+	function level2017(flow) {
+		return 0.00042*flow + 21.47;  // intercept is actually 21.4531, but add ~1.5 cm for aesthetics / reduced overlap
+	}
+
+	const FLOW_RANGE = [1250, 10000];
+	const LEVEL_RANGE = FLOW_RANGE.map(level2017);
+
+	const FLOW_ANNOTATIONS = [
+		{label: "peak flow, 100-year", value: 8549, color: "#D62728"},
+		{label: "20-year", value: 7364, color: "#D69927"},
+		{label: "2-year", value: 5265, color: "lightgrey"}
+	];
+
+	function flowAnnotationNote(d) {
+		var val = d.value;
+		return {
+			text: d.label, showarrow: false,
+			x: 0.175, xref: "paper", xanchor: "right",
+			y: val, yref: "y",
+			xshift: -5,
+			bgcolor: "white",
+			borderpad: 2
+		};
+	}
+
+	function flowAnnotationShape(d) {
+		var val = d.value;
+		return {
+			type: "line", layer: "below",
+			x0: 0.175, x1: 1, xref: "paper",
+			y0: val, y1: val, yref: "y",
+			line: {color: d.color, width: 2, dash: "dot"}
+		};
+	}
+
+	function extract(data, col) {
+		return data.map(function(d) { return d[col]; });
+	}
+
+	d3.json("https://thingspeak.com/channels/389136/feed.json?days=180&results=1000", function(err, data) {
+		if (err) {
+			console.log(err);
+			return;
+		}
+		window.data = data;
+
+		var timestamps = extract(data.feeds, 'created_at').map(function (d) { return new Date(d); });  // convert to Date to show in local timezone
+
+		var traces = [];
+		FIELDS.forEach(function(field) {
+			var fieldName = 'field' + field.num;
+			var values = extract(data.feeds, fieldName).map(function (d) { return d !== null ? Number(d) : null; });
+			traces.push({
+				name: field.name,
+				x: timestamps,
+				y: values,
+				mode: 'lines',
+				yaxis: field.yaxis,
+				connectgaps: true,
+				line: {
+					color: field.color
+				}
+			});
+		});
+		window.traces = traces;
+
+		var layout = {
+			title: "Metawatch: Current readings",
+			margins: {l: 80, r: 80, t: 80, b: 80, pad: 8},
+			xaxis: {
+				type: 'date',
+				nticks: 12,
+				hoverformat: "%a, %b %e %H:%M"
+			},
+			yaxis: {
+				title: "Flow rate (m³/sec)",
+				range: FLOW_RANGE,
+				side: 'left',
+				showgrid: true,
+				exponentformat: "none",
+				separatethousands: true,
+				showspikes: false,
+				overlaying: 'y2'
+			},
+			yaxis2: {
+				title: "Water level (m)",
+				range: LEVEL_RANGE,
+				side: 'right',
+				showgrid: false,
+				exponentformat: "none",
+				separatethousands: true,
+				showspikes: false
+			},
+			legend: {
+				orientation: 'h',
+				x: 0.125,
+				y: 1.05
+			},
+			hovermode: 'x',
+			hoverlabel: { namelength: -1 },
+			annotations: FLOW_ANNOTATIONS.map(flowAnnotationNote),
+			shapes: FLOW_ANNOTATIONS.map(flowAnnotationShape)
+		};
+		window.layout = layout;
+
+		window.plot = Plotly.plot('chart', window.traces, layout);
+	});
+</script>
+
+</body>
+</html>

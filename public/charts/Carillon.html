@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<title>Carillon Dam water level &amp; flow rate: 2018 estimated vs 2017 actual</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+
+<div id="chart" style="width:1024px;height:768px;"></div>
+
+<script>
+	/*globals Plotly d3*/
+	window.d3 = Plotly.d3;
+
+//	function level2017(flow) {
+//		return 0.00042*flow + 21.47;  // intercept is actually 21.4531, but add ~1.7 cm for aesthetics / reduced overlap
+//	}
+
+	const FLOW_RANGE = [1250, 10000];
+//	const LEVEL_RANGE = FLOW_RANGE.map(level2017);
+
+	const FLOW_ANNOTATIONS = [
+		{label: "100-year", value: 8549, color: "#D62728"},
+		{label: "20-year", value: 7364, color: "#D69927"},
+		{label: "2-year", value: 5265, color: "lightgrey"},
+		{label: "Head Pond Reduction starts", value: 4000, color: "lightgrey"},
+		{label: "Head Pond Reduction ends", value: 5000, color: "lightgrey"},
+	];
+
+	const ANNOTATION_X = 0.28;
+
+	function flowAnnotationNote(d) {
+		var val = d.value;
+		return {
+			text: d.label + " - (" + val + ")",
+			showarrow: false,
+			x: ANNOTATION_X, xref: "paper", xanchor: "right",
+			y: val, yref: "y",
+			xshift: -5,
+			bgcolor: "white",
+			borderpad: 2
+		};
+	}
+
+	function flowAnnotationShape(d) {
+		var val = d.value;
+		return {
+			type: "line", layer: "below",
+			x0: ANNOTATION_X, x1: 1, xref: "paper",
+			y0: val, y1: val, yref: "y",
+			line: {color: d.color, width: 2, dash: "dot"}
+		};
+	}
+
+	function extract(data, col) {
+		return data.map(function(d) { return d[col]; });
+	}
+
+	d3.csv("HQ-master-2017-hourly-max with 2018 year.csv", function(err, data) {
+		if (err) {
+			console.log(err);
+			return;
+		}
+		var histTimestamps = extract(data, 'datetime'),
+				histFlows = extract(data, '2017 Flow'),
+				histLevels = extract(data, '2017 Level');
+
+		d3.json("https://thingspeak.com/channels/389136/field/1.json?days=150&timescale=30", function(err, data) {
+			if (err) {
+				console.log(err);
+				return;
+			}
+			window.data = data;
+			var curTimestamps = extract(data.feeds, 'created_at').map(function (d) { return new Date(d)}),  // convert to Date to show in local timezone
+				curFlows = extract(data.feeds, 'field1').map(function (d) { return d !== null ? Number(d) : null; });
+
+			var traceHistFlow = {
+				name: '2017 flow',
+				x: histTimestamps,
+				y: histFlows,
+				mode: 'lines',
+				yaxis: 'y'
+			};
+			// var traceHistLevel = {
+			// 	name: '2017 level',
+			// 	x: histTimestamps,
+			// 	y: histLevels,
+			// 	mode: 'lines',
+			// 	yaxis: 'y2'
+			// };
+			var traceCurFlow = {
+				name: '2018 flow',
+				x: curTimestamps,
+				y: curFlows,
+				mode: 'lines',
+				yaxis: 'y',
+				connectgaps: true
+			};
+			var layout = {
+				title: "Carillon Dam flow rates: 2018 estimated vs 2017 actual",
+				margins: {l: 80, r: 80, t: 80, b: 80, pad: 8},
+				xaxis: {
+					type: 'date',
+					nticks: 12,
+					hoverformat: "%a, %b %e %H:%M",
+					rangeslider: {visible: true}
+				},
+				yaxis: {
+					title: "Flow rate (m³/sec)",
+					range: FLOW_RANGE,
+					side: 'left',
+					showgrid: true,
+					exponentformat: "none",
+					separatethousands: true,
+					showspikes: false,
+					// overlaying: 'y2'
+				},
+				// yaxis2: {
+				// 	title: "Water level (m)",
+				// 	range: LEVEL_RANGE,
+				// 	side: 'right',
+				// 	showgrid: false,
+				// 	exponentformat: "none",
+				// 	separatethousands: true,
+				// 	showspikes: false
+				// },
+				legend: {
+					orientation: 'h',
+					x: 0.37,
+					y: 1
+				},
+				hovermode: 'x',
+				annotations: FLOW_ANNOTATIONS.map(flowAnnotationNote),
+				shapes: FLOW_ANNOTATIONS.map(flowAnnotationShape)
+			};
+			window.traces = [traceCurFlow, traceHistFlow];
+			window.plot = Plotly.plot('chart', window.traces, layout);
+		});
+	});
+</script>
+
+</body>
+</html>

@@ -162,8 +162,8 @@
 			},
 			hovermode: 'x',
 			hoverlabel: { namelength: -1 },
-			annotations: options.showPeaks ? annotations.map(flowAnnotationNote) : [],
-			shapes: options.showPeaks ? annotations.map(flowAnnotationShape) : []
+			annotations: annotations.map(flowAnnotationNote),
+			shapes: annotations.map(flowAnnotationShape)
 		};
 		window.layout = layout;
 

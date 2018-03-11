@@ -2,9 +2,9 @@
 <html lang="en">
 
 <head>
-<meta charset="utf-8">
-<title>Metawatch: Current readings</title>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	<meta charset="utf-8">
+	<title>Metawatch: Current readings</title>
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
@@ -14,6 +14,28 @@
 <script>
 	/*globals Plotly d3*/
 	window.d3 = Plotly.d3;
+
+	function getQueryArgs() {
+		var q = d3.map(), dec = decodeURIComponent;
+		window.location.search.slice(1).split("&").forEach(function(s) {
+			if (s) {
+				var i = s.indexOf("="),
+						k = i == -1 ? s  : s.slice(0, i),
+						v = i == -1 ? "" : s.slice(i+1);
+				q.set(dec(k), dec(v));
+			}
+		});
+		return q;
+	}
+
+	const queryArgs = getQueryArgs();
+	window.queryArgs = queryArgs;
+
+	const options = {
+		start: queryArgs.get("start") || "2018-03-08",
+		showPeaks: !queryArgs.has("showPeaks") || queryArgs.get("showPeaks") == "true",
+		showThresholds: !queryArgs.has("showThresholds") || queryArgs.get("showThresholds") == "true"
+	};
 
 	const FIELDS = [
 		{num: 1, name: "Carillon flow (estimate)", yaxis: 'y', color: '#ff7f0e'},
@@ -28,19 +50,30 @@
 	const FLOW_RANGE = [1250, 10000];
 	const LEVEL_RANGE = FLOW_RANGE.map(level2017);
 
-	const FLOW_ANNOTATIONS = [
-		{label: "peak flow, 100-year", value: 8549, color: "#D62728"},
-		{label: "20-year", value: 7364, color: "#D69927"},
-		{label: "2-year", value: 5265, color: "lightgrey"}
-	];
+	var annotations = [];
+	if (options.showThresholds) {
+		annotations = annotations.concat([
+			{label: "Head Pond Reduction starts", value: 4000, color: "lightgrey"},
+			{label: "Head Pond Reduction ends", value: 5000, color: "lightgrey"}
+		]);
+	}
+	if (options.showPeaks) {
+		annotations = annotations.concat([
+			{label: "100-year", value: 8549, color: "#D62728"},
+			{label: "20-year", value: 7364, color: "#D69927"},
+			{label: "2-year", value: 5265, color: "lightgrey"}
+		]);
+	}
+
+	const ANNOTATION_X = 0.27;
 
 	function flowAnnotationNote(d) {
 		var val = d.value;
 		return {
-			text: d.label, showarrow: false,
-			x: 0.175, xref: "paper", xanchor: "right",
+			text: d.label + " (" + val + ")",
+			showarrow: false,
+			x: ANNOTATION_X, xref: "paper", xanchor: "right", xshift: -5,
 			y: val, yref: "y",
-			xshift: -5,
 			bgcolor: "white",
 			borderpad: 2
 		};
@@ -50,7 +83,7 @@
 		var val = d.value;
 		return {
 			type: "line", layer: "below",
-			x0: 0.175, x1: 1, xref: "paper",
+			x0: ANNOTATION_X, x1: 1, xref: "paper",
 			y0: val, y1: val, yref: "y",
 			line: {color: d.color, width: 2, dash: "dot"}
 		};
@@ -60,19 +93,27 @@
 		return data.map(function(d) { return d[col]; });
 	}
 
-	d3.json("https://thingspeak.com/channels/389136/feed.json?days=180&results=1000", function(err, data) {
+	const url = "https://thingspeak.com/channels/389136/feed.json?" + [
+		"start=" + encodeURIComponent(options.start),
+		"results=1000"
+	].join("&");
+	d3.json(url, function(err, data) {
 		if (err) {
 			console.log(err);
 			return;
 		}
 		window.data = data;
 
-		var timestamps = extract(data.feeds, 'created_at').map(function (d) { return new Date(d); });  // convert to Date to show in local timezone
+		var timestamps = extract(data.feeds, 'created_at').map(function (d) {
+			return new Date(d);
+		});  // convert to Date to show in local timezone
 
 		var traces = [];
 		FIELDS.forEach(function(field) {
 			var fieldName = 'field' + field.num;
-			var values = extract(data.feeds, fieldName).map(function (d) { return d !== null ? Number(d) : null; });
+			var values = extract(data.feeds, fieldName).map(function (d) {
+				return d !== null ? Number(d) : null;
+			});
 			traces.push({
 				name: field.name,
 				x: timestamps,
@@ -87,7 +128,7 @@
 		});
 		window.traces = traces;
 
-		var layout = {
+		const layout = {
 			title: "Metawatch: Current readings",
 			margins: {l: 80, r: 80, t: 80, b: 80, pad: 8},
 			xaxis: {
@@ -117,12 +158,12 @@
 			legend: {
 				orientation: 'h',
 				x: 0.125,
-				y: 1.05
+				y: 1.07
 			},
 			hovermode: 'x',
 			hoverlabel: { namelength: -1 },
-			annotations: FLOW_ANNOTATIONS.map(flowAnnotationNote),
-			shapes: FLOW_ANNOTATIONS.map(flowAnnotationShape)
+			annotations: options.showPeaks ? annotations.map(flowAnnotationNote) : [],
+			shapes: options.showPeaks ? annotations.map(flowAnnotationShape) : []
 		};
 		window.layout = layout;
 

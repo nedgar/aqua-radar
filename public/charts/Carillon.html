@@ -15,6 +15,29 @@
 	/*globals Plotly d3*/
 	window.d3 = Plotly.d3;
 
+	function getQueryArgs() {
+		var q = d3.map(), dec = decodeURIComponent;
+		window.location.search.slice(1).split("&").forEach(function(s) {
+			if (s) {
+				var i = s.indexOf("="),
+						k = i == -1 ? s  : s.slice(0, i),
+						v = i == -1 ? "" : s.slice(i+1);
+				q.set(dec(k), dec(v));
+			}
+		});
+		return q;
+	}
+
+	const queryArgs = getQueryArgs();
+	window.queryArgs = queryArgs;
+
+	const options = {
+		start: queryArgs.get("start") || "2018-03-08",
+		showPeaks: !queryArgs.has("showPeaks") || queryArgs.get("showPeaks") == "true",
+		showThresholds: !queryArgs.has("showThresholds") || queryArgs.get("showThresholds") == "true",
+		dateRange: ["2018-02-01", "2018-05-15"]
+	};
+
 //	function level2017(flow) {
 //		return 0.00042*flow + 21.47;  // intercept is actually 21.4531, but add ~1.7 cm for aesthetics / reduced overlap
 //	}
@@ -22,24 +45,30 @@
 	const FLOW_RANGE = [1250, 10000];
 //	const LEVEL_RANGE = FLOW_RANGE.map(level2017);
 
-	const FLOW_ANNOTATIONS = [
-		{label: "100-year", value: 8549, color: "#D62728"},
-		{label: "20-year", value: 7364, color: "#D69927"},
-		{label: "2-year", value: 5265, color: "lightgrey"},
-		{label: "Head Pond Reduction starts", value: 4000, color: "lightgrey"},
-		{label: "Head Pond Reduction ends", value: 5000, color: "lightgrey"},
-	];
+	var annotations = [];
+	if (options.showThresholds) {
+		annotations = annotations.concat([
+			{label: "Head Pond Reduction starts", value: 4000, color: "lightgrey"},
+			{label: "Head Pond Reduction ends", value: 5000, color: "lightgrey"},
+		]);
+	}
+	if (options.showPeaks) {
+		annotations = annotations.concat([
+			{label: "100-year", value: 8549, color: "#D62728"},
+			{label: "20-year", value: 7364, color: "#D69927"},
+			{label: "2-year", value: 5265, color: "lightgrey"},
+		]);
+	}
 
-	const ANNOTATION_X = 0.28;
+	const ANNOTATION_X = 0.27;
 
 	function flowAnnotationNote(d) {
 		var val = d.value;
 		return {
-			text: d.label + " - (" + val + ")",
+			text: d.label + " (" + val + ")",
 			showarrow: false,
-			x: ANNOTATION_X, xref: "paper", xanchor: "right",
+			x: ANNOTATION_X, xref: "paper", xanchor: "right", xshift: -5,
 			y: val, yref: "y",
-			xshift: -5,
 			bgcolor: "white",
 			borderpad: 2
 		};
@@ -68,7 +97,11 @@
 				histFlows = extract(data, '2017 Flow'),
 				histLevels = extract(data, '2017 Level');
 
-		d3.json("https://thingspeak.com/channels/389136/field/1.json?days=150&timescale=30", function(err, data) {
+		var url = "https://thingspeak.com/channels/389136/field/1.json?" + [
+			"start=" + encodeURIComponent(options.start),
+			"timescale=30"
+		].join("&");
+		d3.json(url, function(err, data) {
 			if (err) {
 				console.log(err);
 				return;
@@ -106,7 +139,8 @@
 					type: 'date',
 					nticks: 12,
 					hoverformat: "%a, %b %e %H:%M",
-					rangeslider: {visible: true}
+					rangeslider: {visible: true},
+					range: options.dateRange
 				},
 				yaxis: {
 					title: "Flow rate (m³/sec)",
@@ -130,11 +164,11 @@
 				legend: {
 					orientation: 'h',
 					x: 0.37,
-					y: 1
+					y: 1.01
 				},
 				hovermode: 'x',
-				annotations: FLOW_ANNOTATIONS.map(flowAnnotationNote),
-				shapes: FLOW_ANNOTATIONS.map(flowAnnotationShape)
+				annotations: annotations.map(flowAnnotationNote),
+				shapes: annotations.map(flowAnnotationShape)
 			};
 			window.traces = [traceCurFlow, traceHistFlow];
 			window.plot = Plotly.plot('chart', window.traces, layout);

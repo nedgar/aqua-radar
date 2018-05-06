@@ -4,12 +4,23 @@
 <head>
 <meta charset="utf-8">
 <title>Carillon Dam water level &amp; flow rate: 2018 estimated vs 2017 actual</title>
+<style>
+body { font-family: "Open Sans", verdana, arial, sans-serif; font-size: 10pt; }
+.disclaimer { margin-left: 25px; }
+</style>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
 
-<div id="chart" style="width:1024px;height:768px;"></div>
+<div id="chart" style="width:1024px; height:768px;"></div>
+
+<div class="disclaimer">
+Hydrological forecasting is based on meteorological forecasting and is therefore
+subject to the same level of uncertainty.
+<br/>These data are provided for information purposes only.
+See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target="_blank">ORRPB site</a>.
+</div>
 
 <script>
 	/*globals Plotly d3*/
@@ -20,30 +31,37 @@
 		window.location.search.slice(1).split("&").forEach(function(s) {
 			if (s) {
 				var i = s.indexOf("="),
-						k = i == -1 ? s  : s.slice(0, i),
-						v = i == -1 ? "" : s.slice(i+1);
+						k = i === -1 ? s  : s.slice(0, i),
+						v = i === -1 ? "" : s.slice(i+1);
 				q.set(dec(k), dec(v));
 			}
 		});
 		return q;
 	}
 
-	const queryArgs = getQueryArgs();
+	var queryArgs = getQueryArgs();
 	window.queryArgs = queryArgs;
 
-	const options = {
-		start: queryArgs.get("start") || "2018-03-08",
-		showPeaks: !queryArgs.has("showPeaks") || queryArgs.get("showPeaks") == "true",
-		showThresholds: !queryArgs.has("showThresholds") || queryArgs.get("showThresholds") == "true",
-		dateRange: ["2018-02-01", "2018-05-15"]
+	var options = {
+		start: queryArgs.get("start") || "2018-04-18T00:00:00-0400",
+		days: Number(queryArgs.get("days")),
+		showPeaks: (queryArgs.get("showPeaks") || "true") === "true",
+		showThresholds: (queryArgs.get("showThresholds") || "true") === "true",
+		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 10,  // minutes
+		dateRange: [addDays(new Date(), -15), addDays(new Date(), 3)]
 	};
+
+	var FIELDS = [
+		{name: "2017 flow", color: '#1f77b4'},
+		{name: "2018 flow", color: '#ff7f0e'}
+	];
 
 //	function level2017(flow) {
 //		return 0.00042*flow + 21.47;  // intercept is actually 21.4531, but add ~1.7 cm for aesthetics / reduced overlap
 //	}
 
-	const FLOW_RANGE = [900, 10000];
-//	const LEVEL_RANGE = FLOW_RANGE.map(level2017);
+	var FLOW_RANGE = [900, 10000];
+//	var LEVEL_RANGE = FLOW_RANGE.map(level2017);
 
 	var annotations = [];
 	if (options.showThresholds) {
@@ -60,7 +78,7 @@
 		]);
 	}
 
-	const ANNOTATION_X = 0.27;
+	var ANNOTATION_X = 0.27;
 
 	function flowAnnotationNote(d) {
 		var val = d.value;
@@ -88,9 +106,8 @@
 		return data.map(function(d) { return d[col]; });
 	}
 
-	function addDays(dt, days, offset) {
-		offset = offset || 0;
-		return new Date(dt.valueOf() + days*24*60*60*1000 + offset);
+	function addDays(dt, days, mins) {
+		return new Date(dt.valueOf() + (days || 0) * 24*60*60*1000 + (mins || 0) * 60*1000);
 	}
 
 	d3.csv("HQ-master-2017-hourly-max with 2018 year.csv", function(err, data) {
@@ -99,39 +116,35 @@
 			return;
 		}
 		var histTimestamps = extract(data, 'datetime'),
-				histFlows = extract(data, '2017 Flow'),
-				histLevels = extract(data, '2017 Level');
+				histFlows = extract(data, '2017 Flow');
 
 		var live_url = "https://thingspeak.com/channels/389136/field/1.json?" + [
-			"start=" + encodeURIComponent(options.start),
-			"timescale=30"
+			options.days
+				? "days=" + encodeURIComponent(options.days)
+				: "start=" + encodeURIComponent(options.start),
+			"timescale=" + encodeURIComponent(String(options.timescale))
 		].join("&");
-
-		var forecast_url = "https://thingspeak.com/channels/452937/feed.json?results=1";
 
 		d3.json(live_url, function(err, data) {
 			if (err) {
 				console.log(err);
 				return;
 			}
-		window.data = data;
-		d3.json(forecast_url, function(err, forecast_data) {
-			window.forecast_data = forecast_data;
-			if (err) {
-				console.log(err);  // log but continue if forecast missing or failed
-			}
+			window.data = data;
 
 			var traceHistFlow = {
-				name: '2017 flow',
+				name: FIELDS[0].name,
 				x: histTimestamps,
 				y: histFlows,
 				mode: 'lines',
-				yaxis: 'y'
+				yaxis: 'y',
+				line: { color: FIELDS[0].color }
 			};
 
 			var
-				curTimestamps = extract(data.feeds, 'created_at').map(function (d) { return new Date(d)}),  // convert to Date to show in local timezone
-				curFlows = extract(data.feeds, 'field1').map(function (d) { return d !== null ? Number(d) : null; });
+				prev = null,
+				curTimestamps = extract(data.feeds, 'created_at').map(function (d) { return new Date(d); }),  // convert to Date to show in local timezone
+				curFlows = extract(data.feeds, 'field1').map(function (d) { return d !== null ? prev = Number(d) : prev; });
 			// var traceHistLevel = {
 			// 	name: '2017 level',
 			// 	x: histTimestamps,
@@ -141,12 +154,12 @@
 			// };
 
 			var traceCurFlow = {
-				name: '2018 flow',
+				name: FIELDS[1].name,
 				x: curTimestamps,
 				y: curFlows,
 				mode: 'lines',
 				yaxis: 'y',
-				connectgaps: true
+				line: { color: FIELDS[1].color }
 			};
 
 			var layout = {
@@ -169,59 +182,60 @@
 					showspikes: false,
 					// overlaying: 'y2'
 				},
-				// yaxis2: {
-				// 	title: "Water level (m)",
-				// 	range: LEVEL_RANGE,
-				// 	side: 'right',
-				// 	showgrid: false,
-				// 	exponentformat: "none",
-				// 	separatethousands: true,
-				// 	showspikes: false
-				// },
 				legend: {
 					orientation: 'h',
-					x: forecast_data ? 0.32 : 0.37,
+					x: 0.31,
 					y: 1.01
 				},
 				hovermode: 'x',
 				annotations: annotations.map(flowAnnotationNote),
 				shapes: annotations.map(flowAnnotationShape)
 			};
-			var traces = [traceHistFlow, traceCurFlow]
+			var traces = [traceHistFlow, traceCurFlow];
 			window.traces = traces;
 
-			var forecast = forecast_data && forecast_data.feeds && forecast_data.feeds[0];
-			if (forecast) {
-				var dt = new Date(forecast.created_at.slice(0,16));  // # drop seconds and 'Z' for now, to treat as local time
-				for (var i = 0; i < 4; ++i) {
-					var
-						field = 'field' + (i*2+2),
-						val = +forecast[field],
-						x = [],
-						y = [];
-					for (var h = 0; h < 48; ++h) {
-						x.push(addDays(dt, i + h/48));
-						y.push(val);
-					}
-					traces.push({
-						name: 'forecast',
-						x: x,
-						y: y,
-						mode: 'lines',
-						yaxis: 'y',
-						line: {
-							// shape: 'hv',
-							color: 'darkgrey'
-						},
-						showlegend: i == 0  // only show forecast legend once
-					});
-				}
-			}
+			window.plot = Plotly.plot('chart', traces, layout);
 
-			window.plot = Plotly.plot('chart', window.traces, layout);
-		});
+			var forecast_url = "https://thingspeak.com/channels/452937/feed.json?results=1";
+
+			d3.json(forecast_url, function(err, forecast_data) {
+				window.forecast_data = forecast_data;
+				if (err) {
+					console.log("Error fetching forecast data", err);
+					return;
+				}
+				var forecast = forecast_data && forecast_data.feeds && forecast_data.feeds[0];
+				if (forecast) {
+					var dt = new Date(forecast.created_at.slice(0,16));  // # drop seconds and 'Z' for now, to treat as local time
+					for (var d = 0; d < 4; ++d) {
+						var
+							field = 'field' + (d*2+2),
+							val = Number(forecast[field]),
+							x = [],
+							y = [];
+						var minsPerDay = 60*24, incr = Math.max(1, options.timescale);
+						for (var m = 0; m < minsPerDay; m += incr) {
+							x.push(addDays(dt, d, m));
+							y.push(val);
+						}
+						traces = [{
+							name: 'forecast',
+							x: x,
+							y: y,
+							mode: 'lines',
+							yaxis: 'y',
+							line: {
+								color: FIELDS[1].color,
+								dash: 'dashdot'
+							},
+							showlegend: d === 0  // only show forecast legend once
+						}];
+						Plotly.plot('chart', traces, layout);
+					}
+				}
+			});
 	});
-	});
+});
 </script>
 
 </body>

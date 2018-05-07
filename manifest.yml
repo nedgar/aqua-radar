@@ -1,7 +1,8 @@
 applications:
-- name: Node-Radar2
+- name: node-radar
   host: node-radar
   domain: mybluemix.net
+  buildpack: sdk-for-nodejs
   path: .
   instances: 1
   memory: 512M

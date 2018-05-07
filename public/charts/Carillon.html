@@ -206,15 +206,17 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				}
 				var forecast = forecast_data && forecast_data.feeds && forecast_data.feeds[0];
 				if (forecast) {
-					var dt = new Date(forecast.created_at.slice(0,16));  // # drop seconds and 'Z' for now, to treat as local time
+					var dt = new Date(forecast.created_at.replace('Z', '-0400'));  // treat UTC date as EDT
 					for (var d = 0; d < 4; ++d) {
 						var
 							field = 'field' + (d*2+2),
 							val = Number(forecast[field]),
 							x = [],
 							y = [];
-						var minsPerDay = 60*24, incr = Math.max(1, options.timescale);
-						for (var m = 0; m < minsPerDay; m += incr) {
+						var
+							minsPerDay = 60*24, incr = Math.max(1, options.timescale),
+							startMin = d === 0 ? 12*60 : 0;
+						for (var m = startMin; m < minsPerDay; m += incr) {
 							x.push(addDays(dt, d, m));
 							y.push(val);
 						}

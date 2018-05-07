@@ -16,9 +16,10 @@
 <div id="chart" style="width:1024px; height:768px;"></div>
 
 <div class="disclaimer">
-Hydrological forecasting is based on meteorological forecasting and is therefore
+Pointe Fortune level is estimated below ~23.3m, actual above that (since May 2-3).
+<br>Hydrological forecasting is based on meteorological forecasting and is therefore
 subject to the same level of uncertainty.
-<br/>These data are provided for information purposes only.
+<br>These data are provided for information purposes only.
 See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target="_blank">ORRPB site</a>.
 </div>
 
@@ -45,14 +46,16 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 	var options = {
 		start: queryArgs.get("start"),
 		days: Number(queryArgs.get("days") || 15),
-		showPeaks: (queryArgs.get("showPeaks") || "true") === "true",
-		showThresholds: (queryArgs.get("showThresholds") || "true") === "true",
+		showFlow: (queryArgs.get("showFlow") || "true") === "true",
 		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 10  // minutes
 	};
+	options.showPeaks = (queryArgs.get("showPeaks") || String(options.showFlow)) === "true";
+	options.showThresholds = (queryArgs.get("showThresholds") || String(options.showFlow)) === "true";
+	options.showingFlow = options.showFlow || options.showPeaks || options.showThresholds;
 
 	var FIELDS = [
 		{num: 1, name: "Carillon flow (estimate)", yaxis: 'y', color: '#ff7f0e'},
-		{num: 5, name: "Pointe Fortune level (estimate)", yaxis: 'y2', color: '#1f77b4'},
+		{num: 5, name: "Pointe Fortune level", yaxis: 'y2', color: '#1f77b4'},
 		{num: 4, name: "Pointe Calumet level (actual)", yaxis: 'y2', color: '#2ca02c'}
 	];
 
@@ -129,21 +132,23 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 
 		var traces = [];
 		FIELDS.forEach(function(field) {
-			var fieldName = 'field' + field.num;
-			var values = extract(data.feeds, fieldName).map(function (d) {
-				return d ? Number(d) : null;
-			});
-			traces.push({
-				name: field.name,
-				x: timestamps,
-				y: values,
-				mode: 'lines',
-				yaxis: field.yaxis,
-				connectgaps: true,
-				line: {
-					color: field.color
-				}
-			});
+			if (options.showFlow || field.num !== 1) {
+				var fieldName = 'field' + field.num;
+				var values = extract(data.feeds, fieldName).map(function (d) {
+					return d ? Number(d) : null;
+				});
+				traces.push({
+					name: field.name,
+					x: timestamps,
+					y: values,
+					mode: 'lines',
+					yaxis: field.yaxis,
+					connectgaps: true,
+					line: {
+						color: field.color
+					}
+				});
+			}
 		});
 		window.traces = traces;
 
@@ -161,7 +166,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				title: "Flow rate (m³/sec)",
 				range: FLOW_RANGE,
 				side: 'left',
-				showgrid: true,
+				showgrid: false,
 				exponentformat: "none",
 				separatethousands: true,
 				showspikes: false,
@@ -171,14 +176,15 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				title: "Water level (m)",
 				range: LEVEL_RANGE,
 				side: 'right',
-				showgrid: false,
+				showgrid: true,
 				exponentformat: "none",
 				separatethousands: true,
-				showspikes: false
+				showspikes: false,
+				dtick: 0.2
 			},
 			legend: {
 				orientation: 'h',
-				x: 0.125,
+				x: (options.showFlow ? 0.15 : 0.27),
 				y: 1.03
 			},
 			hovermode: 'x',
@@ -186,6 +192,9 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 			annotations: annotations.map(flowAnnotationNote),
 			shapes: annotations.map(flowAnnotationShape)
 		};
+		if (!options.showingFlow) {
+			delete layout.yaxis;
+		}
 		window.layout = layout;
 
 		window.plot = Plotly.plot('chart', traces, layout);
@@ -217,20 +226,25 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 						y1.push(val1);
 						y2.push(val2);
 					}
-					traces = [
-						{
-							name: 'Carillon flow forecast',
-							x: x,
-							y: y2,
-							mode: 'lines',
-							yaxis: 'y',
-							line: {
-								// shape: 'hv',
-								color: FIELDS[0].color,
-								dash: 'dashdot'
-							},
-							showlegend: false
-						},
+					traces = [];
+					if (options.showFlow) {
+						traces.push(
+							{
+								name: 'Carillon flow forecast',
+								x: x,
+								y: y2,
+								mode: 'lines',
+								yaxis: 'y',
+								line: {
+									// shape: 'hv',
+									color: FIELDS[0].color,
+									dash: 'dashdot'
+								},
+								showlegend: false
+							}
+						);
+					}
+					traces.push(
 						{
 							name: 'Pointe Fortune level forecast',
 							x: x,
@@ -244,7 +258,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 							},
 							showlegend: false
 						}
-					];
+					);
 					Plotly.plot('chart', traces, layout);
 				}
 			}

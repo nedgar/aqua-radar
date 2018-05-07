@@ -214,7 +214,8 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 							x = [],
 							y = [];
 						var
-							minsPerDay = 60*24, incr = Math.max(1, options.timescale),
+							minsPerDay = 60*24,
+							incr = Math.max(1, options.timescale),
 							startMin = d === 0 ? 12*60 : 0;
 						for (var m = startMin; m < minsPerDay; m += incr) {
 							x.push(addDays(dt, d, m));

@@ -43,7 +43,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 	window.queryArgs = queryArgs;
 
 	var options = {
-		start: queryArgs.get("start") || "2018-04-18T00:00:00-0400",
+		start: queryArgs.get("start") || "2018-04-18T00:00:00-04:00",
 		days: Number(queryArgs.get("days")),
 		showPeaks: (queryArgs.get("showPeaks") || "true") === "true",
 		showThresholds: (queryArgs.get("showThresholds") || "true") === "true",
@@ -206,7 +206,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				}
 				var forecast = forecast_data && forecast_data.feeds && forecast_data.feeds[0];
 				if (forecast) {
-					var dt = new Date(forecast.created_at.replace('Z', '-0400'));  // treat UTC date as EDT
+					var dt = new Date(forecast.created_at.replace('Z', '-04:00'));  // treat UTC date as EDT
 					for (var d = 0; d < 4; ++d) {
 						var
 							field = 'field' + (d*2+2),
@@ -215,8 +215,8 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 							y = [];
 						var
 							minsPerDay = 60*24,
-							incr = Math.max(1, options.timescale),
-							startMin = d === 0 ? 12*60 : 0;
+							startMin = d === 0 ? 12*60 : 0,
+							incr = Math.max(1, options.timescale);
 						for (var m = startMin; m < minsPerDay; m += incr) {
 							x.push(addDays(dt, d, m));
 							y.push(val);

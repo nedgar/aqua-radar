@@ -1,10 +1,11 @@
 applications:
-- path: .
-  memory: 512M
-  instances: 1
-  domain: mybluemix.net
-  name: Node-Radar2
+- name: Node-Radar2
   host: node-radar
+  domain: mybluemix.net
+  buildpack: python_buildpack
+  path: .
+  instances: 1
+  memory: 512M
   disk_quota: 1024M
   services:
   - Node-Radar2-iotf-service

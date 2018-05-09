@@ -208,6 +208,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 
 			var forecast = forecast_data && forecast_data.feeds && forecast_data.feeds[0];
 			if (forecast) {
+				traces = [];
 				var dt = new Date(forecast.created_at.replace('Z', '-04:00'));  // treat UTC date as EDT
 				for (var d = 0; d < 4; ++d) {
 					var
@@ -220,13 +221,12 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 					var
 						minsPerDay = 60*24,
 						startMin = d === 0 ? 12*60 : 0,
-						incr = Math.max(1, options.timescale);
-					for (var m = startMin; m < minsPerDay; m += incr) {
-						x.push(addDays(dt, d, m));
+						incr = Math.min(240, Math.max(1, options.timescale));
+					for (var m = startMin; m <= minsPerDay; m += incr) {
+						x.push(addDays(dt, d, m < minsPerDay ? m : m-1));
 						y1.push(val1);
 						y2.push(val2);
 					}
-					traces = [];
 					if (options.showFlow) {
 						traces.push(
 							{
@@ -259,8 +259,8 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 							showlegend: false
 						}
 					);
-					Plotly.plot('chart', traces, layout);
 				}
+				Plotly.plot('chart', traces, layout);
 			}
 		});
 

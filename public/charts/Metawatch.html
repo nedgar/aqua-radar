@@ -44,13 +44,15 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 	window.queryArgs = queryArgs;
 
 	var options = {
-		start: queryArgs.get("start"),
-		days: Number(queryArgs.get("days") || 15),
+		channel: 493058,
+		start: queryArgs.get("start") || "2018-04-18T00:00:00-04:00",
+		days: Number(queryArgs.get("days")),
 		showFlow: (queryArgs.get("showFlow") || "true") === "true",
-		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 10  // minutes
+		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 15,  // minutes
+		dateRange: [addDays(new Date(), -10), addDays(new Date(), 3)]
 	};
 	options.showPeaks = (queryArgs.get("showPeaks") || String(options.showFlow)) === "true";
-	options.showThresholds = (queryArgs.get("showThresholds") || String(options.showFlow)) === "true";
+	options.showThresholds = (queryArgs.get("showThresholds") || "false") === "true";
 	options.showingFlow = options.showFlow || options.showPeaks || options.showThresholds;
 
 	var FIELDS = [
@@ -113,7 +115,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		return new Date(dt.valueOf() + (days || 0) * 24*60*60*1000 + (mins || 0) * 60*1000);
 	}
 
-	var url = "https://thingspeak.com/channels/389136/feed.json?" + [
+	var url = "https://thingspeak.com/channels/" + options.channel + "/feed.json?" + [
 		options.start
 			? "start=" + encodeURIComponent(options.start)
 			: "days=" + encodeURIComponent(options.days),
@@ -133,9 +135,9 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		var traces = [];
 		FIELDS.forEach(function(field) {
 			if (options.showFlow || field.num !== 1) {
-				var fieldName = 'field' + field.num;
+				var fieldName = 'field' + field.num, prev;
 				var values = extract(data.feeds, fieldName).map(function (d) {
-					return d ? Number(d) : null;
+					return d ? prev = Number(d) : prev;
 				});
 				traces.push({
 					name: field.name,
@@ -160,7 +162,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				nticks: 12,
 				hoverformat: "%a, %b %e %H:%M",
 				rangeslider: {visible: true},
-				range: [timestamps[0], addDays(new Date(), 3)]
+				range: options.dateRange
 			},
 			yaxis: {
 				title: "Flow rate (m³/sec)",

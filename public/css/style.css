@@ -14,7 +14,6 @@ a:hover {
 }
 
 h1,h2,h3,h4,h5 {
-    font-family: "Roboto Slab";
     font-weight: normal;
 }
 h1 {
@@ -41,8 +40,7 @@ h5 {
 }
 
 .title {
-    background: url(../images/title-wave.png) no-repeat 0% 100% #8f0000 ;
-    border-top: 10px solid #a22222;
+    background: url(../images/blue-wave.jpg) no-repeat 0% 100% #2266ff ;
     text-align: center;
 }
 
@@ -56,14 +54,14 @@ a.button {
     text-decoration: none;
     display: inline-block;
     padding: 30px 40px;
-    border: 1px solid #aa6767;
+    border: 1px solid #2266ff;
     border-radius: 1px;
     background: none;
-    color: #aa6767;
+    color: #2266ff;
 }
 a.button:hover {
     text-decoration: none;
-    background: #aa6767;
+    background: #2266ff;
     color: #eee;
 }
 
@@ -103,8 +101,8 @@ a.button:hover {
 }
 
 .content {
-    min-height: 250px;
-    padding: 60px 0;
+    min-height: 100px;
+    padding: 25px 0;
     margin: 0;
 }
 
@@ -142,7 +140,7 @@ a.button:hover {
     width: 100%;
 }
 .title .content {
-    height: 280px;
+    height: 150px;
 }
 .title h1 {
     margin-top: 20px;
@@ -156,10 +154,10 @@ a.button:hover {
     font-size: 20px;
     font-family: "Open Sans", sans-serif;
     font-weight: normal;
-    color: #c19e9e;
+    color: #bcf;
 }
 .title p {
-    color: #c19e9e;
+    color: #bcf;
 }
 .title img {
     margin: auto;
@@ -240,7 +238,7 @@ a.button:hover {
 }
 
 button {
-    border: 1px solid #666;
+    border: 1px solid #55f;
     padding: 10px;
     background: white;
     font-size: 16px;
@@ -249,8 +247,8 @@ button {
     cursor: pointer;
 }
 button:hover {
-    border-color: #8f0000;
-    color: #8f0000;
+    border-color: #00008f;
+    color: #00008f;
 }
 button:disabled {
     color: #ccc;

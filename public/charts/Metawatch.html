@@ -16,10 +16,12 @@
 <div id="chart" style="width:1024px; height:768px;"></div>
 
 <div class="disclaimer">
-Pointe Fortune level is estimated below ~23.3m, actual above that (since May 2-3).
-<br>Hydrological forecasting is based on meteorological forecasting and is therefore
+At Pointe Fortune, the water level is estimated when below about 23.3m, with actual readings above that.
+<p>
+Hydrological forecasting is based on meteorological forecasting and is therefore
 subject to the same level of uncertainty.
-<br>These data are provided for information purposes only.
+<br>
+These data are provided for information purposes only.
 See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target="_blank">ORRPB site</a>.
 </div>
 
@@ -45,7 +47,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 
 	var options = {
 		channel: 493058,
-		start: queryArgs.get("start") || "2018-04-18T00:00:00-04:00",
+		start: queryArgs.get("start") || "2019-01-01T00:00:00-04:00",
 		days: Number(queryArgs.get("days")),
 		showFlow: (queryArgs.get("showFlow") || "true") === "true",
 		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 15,  // minutes
@@ -115,12 +117,13 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		return new Date(dt.valueOf() + (days || 0) * 24*60*60*1000 + (mins || 0) * 60*1000);
 	}
 
-	var url = "https://thingspeak.com/channels/" + options.channel + "/feed.json?" + [
+	var tsQueryArgs = [
 		options.start
 			? "start=" + encodeURIComponent(options.start)
 			: "days=" + encodeURIComponent(options.days),
 		"timescale=" + encodeURIComponent(options.timescale)
 	].join("&");
+	var url = "https://thingspeak.com/channels/" + options.channel + "/feed.json?" + tsQueryArgs;
 	d3.json(url, function(err, data) {
 		if (err) {
 			console.log(err);
@@ -155,7 +158,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		window.traces = traces;
 
 		var layout = {
-			title: "Metawatch: Current readings",
+			title: "Current flow rate at Carillon dam, and nearby water levels",
 			margins: {l: 80, r: 80, t: 80, b: 80, pad: 8},
 			xaxis: {
 				type: 'date',
@@ -201,7 +204,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 
 		window.plot = Plotly.plot('chart', traces, layout);
 
-		var forecast_url = "https://thingspeak.com/channels/452937/feed.json?results=1";
+		var forecast_url = "https://thingspeak.com/channels/452937/feed.json?results=1&" + tsQueryArgs;
 		d3.json(forecast_url, function(err, forecast_data) {
 			window.forecast_data = forecast_data;
 			if (err) {

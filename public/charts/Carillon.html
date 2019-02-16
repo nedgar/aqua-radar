@@ -3,7 +3,7 @@
 
 <head>
 <meta charset="utf-8">
-<title>Carillon Dam water level &amp; flow rate: 2018 estimated vs 2017 actual</title>
+<title>Carillon Dam water level &amp; flow rate: 2019 estimated vs 2017 actual</title>
 <style>
 body { font-family: "Open Sans", verdana, arial, sans-serif; font-size: 10pt; }
 .disclaimer { margin-left: 25px; }
@@ -16,9 +16,15 @@ body { font-family: "Open Sans", verdana, arial, sans-serif; font-size: 10pt; }
 <div id="chart" style="width:1024px; height:768px;"></div>
 
 <div class="disclaimer">
-Hydrological forecasting is based on meteorological forecasting and is therefore
+This chart shows estimated flow rates at Carillon Dam vs actual readings from 2017 (March 1 to May 12), 
+a year where there was significant flooding in the communities downstream from the dam.
+</div>
+<p></p>
+<div class="disclaimer">
+Disclaimer: Hydrological forecasting is based on meteorological forecasting and is therefore
 subject to the same level of uncertainty.
-<br/>These data are provided for information purposes only.
+<br/>
+These data are provided for information purposes only.
 See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target="_blank">ORRPB site</a>.
 </div>
 
@@ -42,19 +48,26 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 	var queryArgs = getQueryArgs();
 	window.queryArgs = queryArgs;
 
+	var simple = queryArgs.get("simple") === "true",
+		showDefault = simple ? "false" : "true";
 	var options = {
 		channel: 493058,
-		start: queryArgs.get("start") || "2018-04-18T00:00:00-04:00",
+		simple: simple,
+		start: queryArgs.get("start") || "2019-01-01T00:00:00-04:00",
 		days: Number(queryArgs.get("days")),
-		showPeaks: (queryArgs.get("showPeaks") || "true") === "true",
-		showThresholds: (queryArgs.get("showThresholds") || "true") === "true",
+		showLegend: (queryArgs.get("showLegend") || showDefault) === "true",
+		showForecast: (queryArgs.get("showForecast") || showDefault) === "true",
+		showPeaks: (queryArgs.get("showPeaks") || showDefault) === "true",
+		showSlider: (queryArgs.get("showSlider") || showDefault) === "true",
+		showThresholds: (queryArgs.get("showThresholds") || showDefault) === "true",
 		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 15,  // minutes
 		dateRange: [addDays(new Date(), -10), addDays(new Date(), 3)]
 	};
+	window.options = options;
 
 	var FIELDS = [
 		{name: "2017 flow", color: '#1f77b4'},
-		{name: "2018 flow", color: '#ff7f0e'}
+		{name: "2019 flow", color: '#ff7f0e'}
 	];
 
 //	function level2017(flow) {
@@ -111,7 +124,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		return new Date(dt.valueOf() + (days || 0) * 24*60*60*1000 + (mins || 0) * 60*1000);
 	}
 
-	d3.csv("HQ-master-2017-hourly-max with 2018 year.csv", function(err, data) {
+	d3.csv("HQ-master-2017-hourly-max with 2019 year.csv", function(err, data) {
 		if (err) {
 			console.log(err);
 			return;
@@ -119,14 +132,15 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		var histTimestamps = extract(data, 'datetime'),
 				histFlows = extract(data, '2017 Flow');
 
-		var live_url = "https://thingspeak.com/channels/" + options.channel + "/field/1.json?" + [
+		var tsQueryArgs = [
 			options.days
 				? "days=" + encodeURIComponent(options.days)
 				: "start=" + encodeURIComponent(options.start),
 			"timescale=" + encodeURIComponent(String(options.timescale))
 		].join("&");
+		var liveUrl = "https://thingspeak.com/channels/" + options.channel + "/field/1.json?" + tsQueryArgs;
 
-		d3.json(live_url, function(err, data) {
+		d3.json(liveUrl, function(err, data) {
 			if (err) {
 				console.log(err);
 				return;
@@ -163,14 +177,16 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				line: { color: FIELDS[1].color }
 			};
 
+			var traces = [traceHistFlow, traceCurFlow];
+
 			var layout = {
-				title: "Carillon Dam flow rates: 2018 estimated vs 2017 actual",
+				title: "Carillon Dam flow rates: 2019 estimated vs 2017 actual",
 				margins: {l: 80, r: 80, t: 80, b: 80, pad: 8},
 				xaxis: {
 					type: 'date',
 					nticks: 12,
 					hoverformat: "%a, %b %e %H:%M",
-					rangeslider: {visible: true},
+					rangeslider: {visible: options.showSlider},
 					range: options.dateRange
 				},
 				yaxis: {
@@ -185,21 +201,29 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				},
 				legend: {
 					orientation: 'h',
-					x: 0.31,
+					x: options.showForecast ? 0.31 : 0.36,
 					y: 1.01
 				},
 				hovermode: 'x',
+				showlegend: options.showLegend,
 				annotations: annotations.map(flowAnnotationNote),
 				shapes: annotations.map(flowAnnotationShape)
 			};
-			var traces = [traceHistFlow, traceCurFlow];
+
+			var plotOptions = {
+				displayModeBar: !options.simple,
+				showAxisDragHandles: !options.simple,
+				staticPlot: options.simple
+			};
+
 			window.traces = traces;
+			window.layout = layout;
+			window.plotOptions = plotOptions;
+			window.plot = Plotly.plot('chart', traces, layout, plotOptions);
 
-			window.plot = Plotly.plot('chart', traces, layout);
+			var forecastUrl = "https://thingspeak.com/channels/452937/feed.json?results=1&" + tsQueryArgs;
 
-			var forecast_url = "https://thingspeak.com/channels/452937/feed.json?results=1";
-
-			d3.json(forecast_url, function(err, forecast_data) {
+			options.showForecast && d3.json(forecastUrl, function(err, forecast_data) {
 				window.forecast_data = forecast_data;
 				if (err) {
 					console.log("Error fetching forecast data", err);

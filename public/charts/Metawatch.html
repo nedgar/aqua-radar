@@ -67,7 +67,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 		return 0.00042*flow + 21.47;  // intercept is actually 21.4531, but add ~1.5 cm for aesthetics / reduced overlap
 	}
 
-	var FLOW_RANGE = [1000, 11100];
+	var FLOW_RANGE = [1000, 12600];
 	var LEVEL_RANGE = FLOW_RANGE.map(level2017);
 
 	var annotations = [];
@@ -173,6 +173,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 				side: 'left',
 				showgrid: false,
 				exponentformat: "none",
+				nticks: 25,
 				separatethousands: true,
 				showspikes: false,
 				overlaying: 'y2'

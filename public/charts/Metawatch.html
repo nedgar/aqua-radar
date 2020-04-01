@@ -47,7 +47,7 @@ See also disclaimers at the <a href="http://ottawariver.ca/forecast.php" target=
 
 	var options = {
 		channel: 493058,
-		start: queryArgs.get("start") || "2019-01-01T00:00:00-04:00",
+		start: queryArgs.get("start") || "2020-01-01T00:00:00-04:00",
 		days: Number(queryArgs.get("days")),
 		showFlow: (queryArgs.get("showFlow") || "true") === "true",
 		timescale: queryArgs.has("timescale") ? queryArgs.get("timescale") : 15,  // minutes
